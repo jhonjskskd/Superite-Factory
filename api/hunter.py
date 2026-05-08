@@ -1,48 +1,80 @@
 import requests
-from bs4 import BeautifulSoup
+import json
 from http.server import BaseHTTPRequestHandler
 
+# --- MASTER CONFIGURATION ---
+# Your unique Serper pass for official Google access
+SERPER_API_KEY = "6c182913e988a6f03588ca60e4cd657a5fb66300" 
 BOT_TOKEN = "8673029559:AAF4zFJC80TERVUMTvZ9ieSMWM0K-2vWGTI"
 CHAT_ID = "7909543900"
 
 def hunt_leads():
-    # We use ONE powerful query to test the connection first
-    query = "site:nairaland.com 'invest in Lagos' 2026"
-    search_url = f"https://www.google.com/search?q={query}"
+    url = "https://google.serper.dev/search"
+    
+    # We target Diaspora Nigerians (UK/USA/Canada) looking for premium Lagos assets
+    # Using 'tbs': 'qdr:m' ensures we get fresh data from the last 30 days
+    payload = json.dumps({
+      "q": "invest in Lagos real estate diaspora (UK OR USA OR Canada) 2026",
+      "tbs": "qdr:m", 
+      "num": 15
+    })
     
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      'X-API-KEY': SERPER_API_KEY,
+      'Content-Type': 'application/json'
     }
-    
+
     try:
-        response = requests.get(search_url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        response = requests.post(url, headers=headers, data=payload, timeout=20)
+        results = response.json()
         
-        # This looks for ANY link in the search results
-        links = []
-        for a in soup.find_all('a', href=True):
-            url = a['href']
-            if "/url?q=" in url and "google.com" not in url:
-                clean_url = url.split("/url?q=")[1].split("&sa=")[0]
-                links.append(clean_url)
-        
-        unique_links = list(set(links))[:3] # Just get 3 for the test
-        
-        if unique_links:
-            for link in unique_links:
-                msg = f"🔍 **TEST LEAD FOUND**\n{link}"
+        count = 0
+        if "organic" in results:
+            for item in results["organic"]:
+                title = item.get("title", "Premium Lead")
+                link = item.get("link", "#")
+                snippet = item.get("snippet", "No context available.")
+                
+                # Professional Card Formatting for your Telegram
+                message = (
+                    "💎 **DIASPORA ASSET SIGNAL** 💎\n"
+                    "━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🏢 **Title:** {title}\n"
+                    f"📝 **Intent:** {snippet[:180]}...\n"
+                    "━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🔗 [SECURE THE LEAD]({link})\n"
+                    "━━━━━━━━━━━━━━━━━━━━\n"
+                    "🌟 *Status: High-Value Verified*"
+                )
+                
+                # Send the card
                 requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
-                              json={"chat_id": CHAT_ID, "text": msg})
-            return len(unique_links)
+                              json={
+                                  "chat_id": CHAT_ID, 
+                                  "text": message, 
+                                  "parse_mode": "Markdown",
+                                  "disable_web_page_preview": False
+                              })
+                count += 1
+                
+        return count
     except Exception as e:
-        print(e)
-    return 0
+        print(f"Factory Error: {e}")
+        return 0
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        # Trigger the hunt
         count = hunt_leads()
+        
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
-        self.wfile.write(f"Test Run Complete. Found {count} results.".encode())
+        
+        if count > 0:
+            output = f"✅ SUCCESS: {count} leads found and delivered to Telegram."
+        else:
+            output = "⚠️ API Connected, but no new signals found. Try widening keywords."
+            
+        self.wfile.write(output.encode())
         
