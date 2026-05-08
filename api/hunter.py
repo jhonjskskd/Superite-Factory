@@ -10,15 +10,14 @@ CHAT_ID = "7909543900"
 def hunt_leads():
     url = "https://google.serper.dev/search"
     
-    # These queries are 'Hardened' to find individuals in the Diaspora
-    # We use quotes for exact phrases and the minus sign (-) to remove junk
+    # These queries are 'Hardened' to find individuals while blocking tech/news junk
     queries = [
-        "site:nairaland.com 'looking for land' Lagos 'UK' OR 'USA' -politics -visa",
-        "site:nairaland.com 'want to buy' Epe OR 'Lekki' 2026 -news -protest",
-        "site:nairaland.com 'recommend' 'trusted' developer Lagos",
-        "site:x.com 'buy property' Lagos diaspora -politics -visa",
-        "site:nairaland.com 'verify' 'Governor Consent' help Lagos",
-        "site:facebook.com 'Nigerians in Canada' 'invest' Lagos land"
+        "site:nairaland.com 'anyone' 'recommend' land Lagos diaspora -software -AI",
+        "site:nairaland.com 'help' 'verify' land title Lagos -coding -tech",
+        "site:nairaland.com 'looking for' property Ibeju Lekki OR Epe 2026",
+        "site:x.com 'want to buy' Lagos land diaspora -AI -developer",
+        "site:nairaland.com 'scammed' 'property' Lagos help -visa",
+        "site:facebook.com 'Nigerians in' 'USA' OR 'UK' 'buying land' Lagos"
     ]
     
     total_found = 0
@@ -27,7 +26,7 @@ def hunt_leads():
     for q in queries:
         payload = json.dumps({
             "q": q,
-            "tbs": "qdr:m", # Strictly the last 30 days for fresh buyers
+            "tbs": "qdr:m", # Strictly the last 30 days for fresh conversations
             "num": 10
         })
         
@@ -45,8 +44,8 @@ def hunt_leads():
                     link = item.get("link")
                     # Deduplication: Don't send the same lead twice
                     if link and link not in seen_links:
-                        title = item.get("title", "Direct Buyer Signal")
-                        snippet = item.get("snippet", "No preview.")
+                        title = item.get("title", "Individual Buyer Signal")
+                        snippet = item.get("snippet", "Checking post content...")
                         
                         # The Premium "Lead Card" for your Telegram
                         message = (
@@ -70,7 +69,7 @@ def hunt_leads():
                         seen_links.add(link)
                         total_found += 1
                         
-                        # 15 leads is the sweet spot for quality control
+                        # Quality over quantity: limit to 15 per run
                         if total_found >= 15: return total_found
         except:
             continue
@@ -84,4 +83,4 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
         self.wfile.write(f"Elite Buyer Scan Finished. {count} individuals delivered.".encode())
-                    
+                        
