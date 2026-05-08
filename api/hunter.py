@@ -10,14 +10,15 @@ CHAT_ID = "7909543900"
 def hunt_leads():
     url = "https://google.serper.dev/search"
     
-    # These queries target high-intent 'I want' and 'Help me' language
+    # These queries are 'Hardened' to find individuals in the Diaspora
+    # We use quotes for exact phrases and the minus sign (-) to remove junk
     queries = [
-        "site:nairaland.com 'looking for land' Lagos 'UK' OR 'USA' 2026",
-        "site:x.com 'recommend' 'realtor' Lagos diaspora",
-        "site:nairaland.com 'verified' land 'Epe' OR 'Ibeju Lekki' 2026",
-        "site:facebook.com 'Nigeria diaspora' 'buy' 'property' Lagos",
-        "site:nairaland.com 'avoid scam' land Lagos 2026",
-        "site:x.com 'want to invest' Nigeria 'real estate' diaspora"
+        "site:nairaland.com 'looking for land' Lagos 'UK' OR 'USA' -politics -visa",
+        "site:nairaland.com 'want to buy' Epe OR 'Lekki' 2026 -news -protest",
+        "site:nairaland.com 'recommend' 'trusted' developer Lagos",
+        "site:x.com 'buy property' Lagos diaspora -politics -visa",
+        "site:nairaland.com 'verify' 'Governor Consent' help Lagos",
+        "site:facebook.com 'Nigerians in Canada' 'invest' Lagos land"
     ]
     
     total_found = 0
@@ -26,7 +27,7 @@ def hunt_leads():
     for q in queries:
         payload = json.dumps({
             "q": q,
-            "tbs": "qdr:m", # Strict focus on the last 30 days
+            "tbs": "qdr:m", # Strictly the last 30 days for fresh buyers
             "num": 10
         })
         
@@ -42,34 +43,34 @@ def hunt_leads():
             if "organic" in results:
                 for item in results["organic"]:
                     link = item.get("link")
+                    # Deduplication: Don't send the same lead twice
                     if link and link not in seen_links:
-                        title = item.get("title", "High-Value Lead")
-                        snippet = item.get("snippet", "No preview available.")
+                        title = item.get("title", "Direct Buyer Signal")
+                        snippet = item.get("snippet", "No preview.")
                         
-                        # Professional Diaspora Lead Card
+                        # The Premium "Lead Card" for your Telegram
                         message = (
-                            "🔥 **HOT INDIVIDUAL LEAD** 🔥\n"
+                            "🎯 **ELITE BUYER SIGNAL** 🎯\n"
                             "━━━━━━━━━━━━━━━━━━━━\n"
                             f"👤 **Source:** {title[:75]}\n"
-                            f"💬 **Message:** \"{snippet[:180]}...\"\n"
+                            f"💬 **Intent:** \"{snippet[:180]}...\"\n"
                             "━━━━━━━━━━━━━━━━━━━━\n"
-                            f"🔗 [GO TO CONVERSATION]({link})\n"
+                            f"🔗 [ENGAGE BUYER]({link})\n"
                             "━━━━━━━━━━━━━━━━━━━━\n"
-                            "✅ *Action: Direct Outreach via DM/Comment*"
+                            "⭐ *Action: Direct Outreach (Nairaland/X)*"
                         )
                         
                         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
                                       json={
                                           "chat_id": CHAT_ID, 
                                           "text": message, 
-                                          "parse_mode": "Markdown",
-                                          "disable_web_page_preview": False
+                                          "parse_mode": "Markdown"
                                       })
                         
                         seen_links.add(link)
                         total_found += 1
                         
-                        # Stop at 15 leads to keep quality high
+                        # 15 leads is the sweet spot for quality control
                         if total_found >= 15: return total_found
         except:
             continue
@@ -82,5 +83,5 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
-        self.wfile.write(f"Elite Scan Finished. {count} premium individuals found.".encode())
-                        
+        self.wfile.write(f"Elite Buyer Scan Finished. {count} individuals delivered.".encode())
+                    
